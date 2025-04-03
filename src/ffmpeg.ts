@@ -28,6 +28,17 @@ export function getFfmpegCommonArgs() {
   return ["-hide_banner", ...(config.enableFfmpegLog ? [] : ["-loglevel", "error"])];
 }
 
+export function getGpuAccelerationArgs() {
+  // 檢查系統是否支援 GPU 加速
+  const isGpuSupported = true; // TODO: 實作檢查 GPU 支援的邏輯
+
+  if (isGpuSupported) {
+    return ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"];
+  } else {
+    return [];
+  }
+}
+
 export function getCutFromArgs({ cutFrom }: { cutFrom?: number }) {
   return cutFrom ? ["-ss", cutFrom.toString()] : [];
 }

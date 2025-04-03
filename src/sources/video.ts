@@ -1,7 +1,7 @@
 import { ExecaError } from "execa";
 import * as fabric from "fabric/node";
 import { defineFrameSource } from "../api/index.js";
-import { ffmpeg, readFileStreams } from "../ffmpeg.js";
+import { ffmpeg, getGpuAccelerationArgs, readFileStreams } from "../ffmpeg.js";
 import { rawVideoToFrames } from "../transforms/rawVideoToFrames.js";
 import type { VideoLayer } from "../types.js";
 import { blurImage, rgbaToFabricImage } from "./fabric.js";
@@ -121,6 +121,8 @@ export default defineFrameSource<VideoLayer>("video", async (options) => {
     "-",
   ];
 
+  const gpuAccelerationArgs = getGpuAccelerationArgs();
+
   const controller = new AbortController();
   const transform = rawVideoToFrames({
     width: targetWidth,
@@ -128,16 +130,17 @@ export default defineFrameSource<VideoLayer>("video", async (options) => {
     channels,
     signal: controller.signal,
   });
-  const ps = ffmpeg(args, {
-    encoding: "buffer",
-    buffer: false,
+  const ps = ffmpeg([...args, ...gpuAccelerationArgs], {
+    encoding: "utf8",
     stdin: "ignore",
-    stdout: { transform },
+    stdout: "pipe",
     stderr: process.stderr,
     // ffmpeg doesn't like to stop, force it
     forceKillAfterDelay: 1000,
     cancelSignal: controller.signal,
   });
+
+  (ps.stdout as NodeJS.ReadableStream).pipe(transform);
 
   // Ignore errors if the process is aborted
   ps.catch((err: ExecaError) => {
