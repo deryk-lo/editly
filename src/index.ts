@@ -216,7 +216,7 @@ async function Editly(input: ConfigurationOptions): Promise<void> {
           "faststart",
         ];
 
-    const audioOutputArgs = audioFilePath ? ["-acodec", "aac", "-b:a", "128k"] : [];
+    const audioOutputArgs = audioFilePath ? ["-acodec", "libmp3lame", "-b:a", "192k"] : [];
 
     return [...audioOutputArgs, ...videoOutputArgs];
   }

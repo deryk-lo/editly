@@ -40,7 +40,7 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
         const { duration, layers, transition } = clip;
 
         async function runInner(): Promise<{ clipAudioPath: string; silent: boolean }> {
-          const clipAudioPath = join(tmpDir, `clip${i}-audio.flac`);
+          const clipAudioPath = join(tmpDir, `clip${i}-audio.mp3`);
 
           async function createSilence() {
             if (verbose) console.log("create silence", duration);
@@ -50,14 +50,14 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
               "lavfi",
               "-i",
               "anullsrc=channel_layout=stereo:sample_rate=44100",
-              "-sample_fmt",
-              "s32",
               "-ar",
-              "48000",
+              "44100",
               "-t",
               duration!.toString(),
               "-c:a",
-              "flac",
+              "libmp3lame",
+              "-b:a",
+              "192k",
               "-y",
               clipAudioPath,
             ];
@@ -88,7 +88,7 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
               const streams = await readFileStreams(path);
               if (!streams.some((s) => s.codec_type === "audio")) return undefined;
 
-              const layerAudioPath = join(tmpDir, `clip${i}-layer${j}-audio.flac`);
+              const layerAudioPath = join(tmpDir, `clip${i}-layer${j}-audio.mp3`);
 
               try {
                 let atempoFilter;
@@ -114,14 +114,14 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
                   path,
                   "-t",
                   cutToArg!.toString(),
-                  "-sample_fmt",
-                  "s32",
                   "-ar",
-                  "48000",
+                  "44100",
                   "-map",
                   "a:0",
                   "-c:a",
-                  "flac",
+                  "libmp3lame",
+                  "-b:a",
+                  "192k",
                   ...(atempoFilter ? ["-filter:a", atempoFilter] : []),
                   "-y",
                   layerAudioPath,
@@ -156,7 +156,9 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
             "-filter_complex",
             `amix=inputs=${processedAudioLayers.length}:duration=longest:weights=${weights.join(" ")}`,
             "-c:a",
-            "flac",
+            "libmp3lame",
+            "-b:a",
+            "192k",
             "-y",
             clipAudioPath,
           ];
@@ -184,7 +186,7 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
       return clipAudio[0].path;
     }
 
-    const outPath = join(tmpDir, "audio-concat.flac");
+    const outPath = join(tmpDir, "audio-concat.mp3");
 
     if (verbose)
       console.log(
@@ -214,7 +216,7 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
       "-filter_complex",
       filterGraph,
       "-c",
-      "flac",
+      "libmp3lame",
       "-y",
       outPath,
     ];
@@ -255,7 +257,7 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
     const audioNormArg = enableAudioNorm ? `,dynaudnorm=g=${gaussSize}:maxgain=${maxGain}` : "";
     filterComplex += `;${streams.map((_, i) => `[a${i}]`).join("")}amix=inputs=${streams.length}:duration=first:dropout_transition=0:weights=${streams.map((s) => (s.mixVolume != null ? s.mixVolume : 1)).join(" ")}${audioNormArg}${volumeArg}`;
 
-    const mixedAudioPath = join(tmpDir, "audio-mixed.flac");
+    const mixedAudioPath = join(tmpDir, "audio-mixed.mp3");
 
     const args = [
       "-nostdin",
@@ -264,7 +266,9 @@ export default ({ verbose, tmpDir }: AudioOptions) => {
       "-filter_complex",
       filterComplex,
       "-c:a",
-      "flac",
+      "libmp3lame",
+      "-b:a",
+      "192k",
       "-y",
       mixedAudioPath,
     ];
